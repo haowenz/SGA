@@ -1,0 +1,6 @@
+add_executable(SequenceIOTest test_sequence_io.cc)
+target_link_libraries(SequenceIOTest sga GTest::GTest GTest::Main)
+gtest_add_tests(TARGET SequenceIOTest WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/tests/data")
+add_executable(SequenceGraphTest test_graph.cc)
+target_link_libraries(SequenceGraphTest sga GTest::GTest GTest::Main)
+gtest_add_tests(TARGET SequenceGraphTest WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/tests/data")
