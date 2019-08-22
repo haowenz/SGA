@@ -6,6 +6,7 @@ find_package(Protobuf REQUIRED)
 find_package(OpenMP)
 
 add_subdirectory(src)
+add_subdirectory(apps)
 
 option(SGA_BUILD_TESTING "Build the tests")
 if(SGA_BUILD_TESTING)
