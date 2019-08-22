@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
     for (uint32_t si = 0; si < num_sequences; ++si) {
     sequence_graph.AlignUsingLinearGapPenaltyWithNavarroAlgorithm(sequence_batch.GetSequence(si));
     }
-    sequence_batch.LoadBatch();
+    num_sequences = sequence_batch.LoadBatch();
   }
   sequence_batch.FinalizeLoading();
 }
