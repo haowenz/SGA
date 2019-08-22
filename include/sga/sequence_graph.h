@@ -330,7 +330,7 @@ class SequenceGraph {
     for (QueryLengthType i = 0; i < sequence_length; ++i) {
       std::swap(previous_layer, current_layer);
       std::swap(previous_order, current_order); 
-      InitializeDistances(base_complement_[sequence_bases[sequence_length - 1 - i]], previous_layer, previous_order, &initialized_layer, &initialized_order);
+      InitializeDistances(base_complement_[(int)sequence_bases[sequence_length - 1 - i]], previous_layer, previous_order, &initialized_layer, &initialized_order);
       //InitializeDistancesWithSorting(base_complement_[sequence_bases[sequence_length - 1 - i]], previous_layer, previous_order, &initialized_layer, &initialized_order);
       current_layer = initialized_layer;
       PropagateInsertions(initialized_layer, initialized_order, &current_layer, &current_order); 
@@ -341,7 +341,78 @@ class SequenceGraph {
     return min_alignment_cost;
   }
 
+  void PropagateWithNavarroAlgorithm(const GraphSizeType from, const GraphSizeType to, GraphSizeType *num_propagations, std::vector<QueryLengthType> *current_layer) {
+    (*num_propagations) += 1;
+    if ((*current_layer)[to] > insertion_penalty_ + (*current_layer)[from]) {
+      (*current_layer)[to] = insertion_penalty_ + (*current_layer)[from];
+      for (GraphSizeType neighbor_index = look_up_table_[to]; neighbor_index < look_up_table_[to + 1]; ++neighbor_index) {
+        GraphSizeType neighbor = neighbor_table_[neighbor_index];
+        PropagateWithNavarroAlgorithm(to, neighbor, num_propagations, current_layer);
+      }
+    }
+  }
 
+  void ComputeLayerWithNavarroAlgorithm(const char sequence_base, const std::vector<QueryLengthType> &previous_layer, GraphSizeType *num_propagations, std::vector<QueryLengthType> *current_layer) {
+    GraphSizeType num_vertices = GetNumVertices();
+    // Initialize current layer
+    (*current_layer)[0] = previous_layer[0] + deletion_penalty_;
+    for (GraphSizeType j = 1; j < num_vertices; ++j) {
+      QueryLengthType cost = 0;
+      if (sequence_base !=  labels_[j]) {
+        cost = substitution_penalty_;
+      }
+      (*current_layer)[j] = previous_layer[0] + cost;
+    }
+    for (GraphSizeType i = 1; i < num_vertices; ++i) {
+      if ((*current_layer)[i] > previous_layer[i] + deletion_penalty_) {
+        (*current_layer)[i] = previous_layer[i] + deletion_penalty_;
+      }
+      //for (auto neighbor : adjacency_list_[i]) {
+      for (GraphSizeType neighbor_index = look_up_table_[i]; neighbor_index < look_up_table_[i + 1]; ++neighbor_index) {
+        GraphSizeType neighbor = neighbor_table_[neighbor_index];
+        QueryLengthType cost = 0;
+        if (sequence_base !=  labels_[neighbor]) {
+          cost = substitution_penalty_;
+        }
+        if ((*current_layer)[neighbor] > previous_layer[i] + cost) {
+          (*current_layer)[neighbor] = previous_layer[i] + cost;
+        }
+      }
+    }
+
+    for (GraphSizeType i = 1; i < num_vertices; ++i) {
+      for (GraphSizeType neighbor_index = look_up_table_[i]; neighbor_index < look_up_table_[i + 1]; ++neighbor_index) {
+        GraphSizeType neighbor = neighbor_table_[neighbor_index];
+        PropagateWithNavarroAlgorithm(i, neighbor, num_propagations, current_layer);
+      }
+    }
+  }
+
+  QueryLengthType AlignUsingLinearGapPenaltyWithNavarroAlgorithm(const sga::Sequence &sequence) {
+    QueryLengthType max_cost = std::max(std::max(substitution_penalty_, deletion_penalty_), insertion_penalty_);
+    GraphSizeType num_vertices = GetNumVertices();
+    QueryLengthType sequence_length = sequence.GetLength();
+    const std::string &sequence_bases = sequence.GetSequence();
+    std::vector<QueryLengthType> previous_layer(num_vertices, sequence_length * max_cost + 1);
+    std::vector<QueryLengthType> current_layer(num_vertices, 0);
+    GraphSizeType num_propagations = 0;
+    for (QueryLengthType i = 0; i < sequence_length; ++i) {
+      std::swap(previous_layer, current_layer);
+      ComputeLayerWithNavarroAlgorithm(sequence_bases[i], previous_layer, &num_propagations, &current_layer);
+    }
+    QueryLengthType forward_alignment_cost = *std::min_element(current_layer.begin(), current_layer.end());
+    // For reverse complement
+    previous_layer.assign(num_vertices, sequence_length * max_cost + 1);
+    current_layer.assign(num_vertices, 0);
+    for (QueryLengthType i = 0; i < sequence_length; ++i) {
+      std::swap(previous_layer, current_layer);
+      ComputeLayerWithNavarroAlgorithm(base_complement_[(int)sequence_bases[sequence_length - 1 - i]], previous_layer, &num_propagations, &current_layer);
+    }
+    QueryLengthType reverse_complement_alignment_cost = *std::min_element(current_layer.begin(), current_layer.end());
+    QueryLengthType min_alignment_cost = std::min(forward_alignment_cost, reverse_complement_alignment_cost);
+    std::cerr << "Sequence length: " << sequence_length << ", forward alignment cost:" << forward_alignment_cost << ", reverse complement alignment cost:" << reverse_complement_alignment_cost << ", alignment cost:" << min_alignment_cost << ", num propogations: " << num_propagations << std::endl;
+    return min_alignment_cost;
+  }
 
  protected:
   char base_complement_[256] = {4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 'T', 4, 'G', 4, 4, 4, 'C', 4, 4, 4, 4, 4, 4, 'N', 4, 4, 4, 4, 4, 'A', 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 'T', 4, 'G', 4, 4, 4, 'C', 4, 4, 4, 4, 4, 4, 'N', 4, 4, 4, 4, 4, 'A', 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4};

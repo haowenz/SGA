@@ -56,6 +56,15 @@ TEST_F(SequenceGraphTest, AlignUsingLinearGapPenaltyTest) {
   }
 }
 
+TEST_F(SequenceGraphTest, AlignUsingLinearGapPenaltyWithNavarroAlgorithmTest) {
+  uint32_t num_loaded_sequences = sequence_batch_.LoadBatch();
+  int32_t max_alignment_scores[5] = {62, 25, 54, 9, 37};
+  sequence_graph_.SetAlignmentParameters(1, 1, 1);
+  for (uint32_t i = 0; i < num_loaded_sequences; ++i) {
+    int32_t alignment_score = sequence_graph_.AlignUsingLinearGapPenaltyWithNavarroAlgorithm(sequence_batch_.GetSequence(i));
+    ASSERT_EQ(alignment_score, max_alignment_scores[i]) << "Alignment score for sequence" << i << " is wrong! It should be " << max_alignment_scores[i] << " but it is " << alignment_score;
+  }
+}
 }  // namespace sga_testing
 
 int main(int argc, char **argv) {
