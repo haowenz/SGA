@@ -19,7 +19,7 @@ make
 ```
 
 ## Usage
-SGA is a header only C++ library. It supports loading graphs in the vg format and sequence files in fasta/q format. You can easily use its API to build your only application. An example on how to use the library to align sequences to graphs is given. After the installation, you can simply test it by running:
+SGA is a header only C++ library. It supports loading graphs in the vg format and sequence files in fasta/q format. You can easily use its API to build your own applications. An example on how to use the library to align sequences to graphs is given. After the installation, you can simply test it by running:
 ```
 ./sga_example graph_file read_file
 ```
