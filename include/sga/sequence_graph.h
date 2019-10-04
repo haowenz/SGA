@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include <queue>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -95,6 +96,32 @@ class SequenceGraph {
     compacted_graph_labels_.emplace_back("N");
     compacted_graph_adjacency_list_.emplace_back(std::vector<GraphSizeType>());
     stream::for_each(graph_file, lambda);
+  }
+
+  void LoadFromTxtFile(const std::string &graph_file_path) {
+    std::string line;
+    std::ifstream infile(graph_file_path);
+    GraphSizeType num_vertices;
+    GraphSizeType row_index = 0;
+    while (std::getline(infile, line)) {
+      std::istringstream inputString(line);
+      //get count of vertices from header row
+        if (row_index == 0) {
+          inputString >> num_vertices;
+          compacted_graph_labels_.reserve(num_vertices);
+        } else { //get out-neighbor vertex ids and vertex label
+          assert(row_index <= num_vertices);
+          compacted_graph_adjacency_list_.emplace_back(std::vector<GraphSizeType>());
+          //Parse the input line
+          std::vector<std::string> tokens (std::istream_iterator<std::string>{inputString}, std::istream_iterator<std::string>());
+          assert(tokens.size() > 0);
+          compacted_graph_labels_.emplace_back(tokens.back());
+          for (auto it = tokens.begin(); it != tokens.end() && std::next(it) != tokens.end(); it++) {
+            compacted_graph_adjacency_list_[row_index - 1].emplace_back(stoi(*it));
+          }
+        }
+      row_index++;
+    }
   }
 
   void GenerateCharLabeledGraph() {
