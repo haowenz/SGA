@@ -124,6 +124,19 @@ class SequenceGraph {
     }
   }
 
+  void OutputCompactedGraphInGFA(std::string &output_file_path) {
+    std::ofstream outstrm(output_file_path);
+    outstrm << "H\tVN:Z:1.0\n";
+    for(uint32_t i = 0; i < compacted_graph_labels_.size(); ++i) {
+      outstrm << "S\t" << i << "\t" << compacted_graph_labels_[i] << "\n";
+    }
+    for(uint32_t i = 0; i < compacted_graph_adjacency_list_.size(); ++i) {
+      for (auto neighbor : compacted_graph_adjacency_list_[i]) {
+        outstrm << "L\t" << i << "\t+\t" << neighbor << "\t+\t0M\n";
+      }
+    }
+  }
+
   void GenerateCharLabeledGraph() {
     for (std::string &compacted_graph_label : compacted_graph_labels_) {
       labels_.emplace_back(compacted_graph_label[0]);
