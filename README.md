@@ -4,7 +4,7 @@ We provide a prototype implementation of two sequence to graph alignment algorit
 ## Installation
 
 ### Install dependencies
-CMake, OpenMP, Protobuf 3.6.1 and GTest if you want to build the test.
+CMake >=3.3.
 
 ### Download and install
 First get the repo:
@@ -14,12 +14,16 @@ git clone git@github.com:haowenz/SGA.git
 Then just run:
 ```
 cd SGA && mkdir build && cd build
-cmake -DCMAKE_SYSTEM_PREFIX_PATH="path_to_gtest;path_to_protobuf" -DSGAL_BUILD_TESTING=ON ..
+cmake -DSGAL_BUILD_TESTING=ON ..
 make
+```
+This will build the tests. Then the tests can be run:
+```
+ctest
 ```
 
 ## Usage
-SGA is a header only C++ library. It supports loading graphs in the vg format and sequence files in fasta/q format. You can easily use its API to build your own applications. An example on how to use the library to align sequences to graphs is given. After the installation, you can simply test it by running:
+SGA is a header only C++ library. It supports loading graphs in txt format and sequence files in fasta/q format. You can easily use its API to build your own applications. An example on how to use the library to align sequences to graphs is given. After the installation, you can simply test it by running:
 ```
 ./sga_example graph_file read_file
 ```
