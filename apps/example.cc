@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
   sga::SequenceGraph<> sequence_graph;
   sequence_graph.SetAlignmentParameters(2, 3, 3);
   sga::SequenceBatch sequence_batch(max_batch_size);
-  sequence_graph.LoadFromVGFile(sequence_graph_file_path);
+  sequence_graph.LoadFromTxtFile(sequence_graph_file_path);
   sequence_graph.GenerateCharLabeledGraph();
   sequence_graph.GenerateCompressedRepresentation();
   sequence_batch.InitializeLoading(sequence_file_path);

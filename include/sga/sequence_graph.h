@@ -1,6 +1,8 @@
 #ifndef SGA_SEQUENCEGRAPH_H
 #define SGA_SEQUENCEGRAPH_H
 
+#include <algorithm>
+#include <iterator>
 #include <fstream>
 #include <queue>
 #include <sstream>
@@ -8,9 +10,7 @@
 #include <vector>
 
 #include "sequence.h"
-#include "stream.hpp"
 #include "utils.h"
-#include "vg.pb.h"
 
 namespace sga {
 template <class GraphSizeType = int32_t, class QueryLengthType = int16_t, class ScoreType = int16_t>
@@ -64,38 +64,6 @@ class SequenceGraph {
     substitution_penalty_ = substitution_penalty;
     deletion_penalty_ = deletion_penalty;
     insertion_penalty_ = insertion_penalty;
-  }
-
-  void LoadFromVGFile(const std::string &graph_file_path) {
-    assert(FileExist(graph_file_path)); 
-    // Load vertices in the vg file
-    std::ifstream graph_file {graph_file_path, std::ios::in | std::ios::binary};
-    std::function<void(vg::Graph&)> lambda = [this](vg::Graph& graph) {
-      GraphSizeType num_nodes = graph.node_size();
-      assert(num_nodes != 0);
-      this->compacted_graph_adjacency_list_.reserve(num_nodes + 1);
-      this->compacted_graph_labels_.reserve(num_nodes + 1);
-      for (GraphSizeType i = 0; i < num_nodes; i++) {
-        auto vg_vertex = graph.node(i);
-        // add vertices and labels
-        this->compacted_graph_labels_.emplace_back(vg_vertex.sequence());
-        this->compacted_graph_adjacency_list_.emplace_back(std::vector<GraphSizeType>());
-      }
-      GraphSizeType num_edges = graph.edge_size();
-      for (GraphSizeType i = 0; i < num_edges; i++) {
-        auto vg_edge = graph.edge(i);
-        // TODO(Haowen): add support for bi-directed graphs and overlaps
-        assert(vg_edge.from_start() == false && "Bi-directed graph not supported yet");
-        assert(vg_edge.to_end() == false && "Bi-directed graph not supported yet");
-        assert(vg_edge.overlap() == 0 && "Graph overlaps not supported yet");
-        // add edges 
-        this->compacted_graph_adjacency_list_[vg_edge.from()].push_back(vg_edge.to());
-      }
-    };
-    //vertex numbering in vg starts from 1, so adding a dummy vertex with id '0'
-    compacted_graph_labels_.emplace_back("N");
-    compacted_graph_adjacency_list_.emplace_back(std::vector<GraphSizeType>());
-    stream::for_each(graph_file, lambda);
   }
 
   void LoadFromTxtFile(const std::string &graph_file_path) {
