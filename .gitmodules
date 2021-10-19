@@ -1,3 +1,0 @@
-[submodule "extern/libvgio"]
-	path = extern/libvgio
-	url = git@github.com:vgteam/libvgio.git
