@@ -1,10 +1,11 @@
 #include <string>
+
 #include "sequence_batch.h"
 #include "sequence_graph.h"
 
 int main(int argc, char *argv[]) {
-    std::string sequence_graph_file_path;
-    std::string sequence_file_path;
+  std::string sequence_graph_file_path;
+  std::string sequence_file_path;
   if (argc != 3) {
     std::cerr << "Usage:\t" << argv[0] << "\tgraph_file\tread_file\n";
     exit(-1);
@@ -23,7 +24,8 @@ int main(int argc, char *argv[]) {
   uint32_t num_sequences = sequence_batch.LoadBatch();
   while (num_sequences > 0) {
     for (uint32_t si = 0; si < num_sequences; ++si) {
-    sequence_graph.AlignUsingLinearGapPenaltyWithNavarroAlgorithm(sequence_batch.GetSequence(si));
+      sequence_graph.AlignUsingLinearGapPenaltyWithNavarroAlgorithm(
+          sequence_batch.GetSequence(si));
     }
     num_sequences = sequence_batch.LoadBatch();
   }
