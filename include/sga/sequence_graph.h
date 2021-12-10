@@ -624,10 +624,10 @@ class SequenceGraph {
     std::vector<std::unordered_map<QueryLengthType, ScoreType>>
         vertex_distances(num_vertices);
 
-    std::vector<std::unordered_map<
-        QueryLengthType, VertexWithDistanceForDijkstra<
-                             GraphSizeType, QueryLengthType, ScoreType>>>
-        vertex_parent(num_vertices);
+    //std::vector<std::unordered_map<
+    //    QueryLengthType, VertexWithDistanceForDijkstra<
+    //                         GraphSizeType, QueryLengthType, ScoreType>>>
+    //    vertex_parent(num_vertices);
 
     auto compare_function =
         [](const VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
@@ -673,10 +673,10 @@ class SequenceGraph {
           {/*graph_vertex_id=*/vertex, /*query_index=*/0, /*distance=*/cost});
       ++num_cells;
       vertex_distances[vertex][0] = cost;
-      vertex_parent[vertex][0] =
-          VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
-                                        ScoreType>{
-              /*graph_vertex_id=*/vertex, /*query_index=*/0, /*distance=*/cost};
+      //vertex_parent[vertex][0] =
+      //    VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
+      //                                  ScoreType>{
+      //        /*graph_vertex_id=*/vertex, /*query_index=*/0, /*distance=*/cost};
       // std::cerr << "Init PUSH: " << vertex << " " << 0 << " " << cost
       //          << std::endl;
     }
@@ -690,35 +690,35 @@ class SequenceGraph {
       // Check if we reach the last layer where we can stop.
       if (current_vertex.query_index + 1 == sequence_length) {
         min_alignment_cost = current_vertex.distance;
-        auto previous_it =
-            VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
-                                          ScoreType>{-1, -1, 0};
-        auto it = current_vertex;
-        while (!(it.graph_vertex_id == previous_it.graph_vertex_id &&
-                 it.query_index == previous_it.query_index)) {
-          std::cerr << "Traceback: "
-                    << "gi: " << it.graph_vertex_id << " qi: " << it.query_index
-                    << " d: " << it.distance
-                    << " qb: " << sequence_bases[it.query_index]
-                    << " gb: " << labels_[it.graph_vertex_id];
+        //auto previous_it =
+        //    VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
+        //                                  ScoreType>{-1, -1, 0};
+        //auto it = current_vertex;
+        //while (!(it.graph_vertex_id == previous_it.graph_vertex_id &&
+        //         it.query_index == previous_it.query_index)) {
+        //  std::cerr << "Traceback: "
+        //            << "gi: " << it.graph_vertex_id << " qi: " << it.query_index
+        //            << " d: " << it.distance
+        //            << " qb: " << sequence_bases[it.query_index]
+        //            << " gb: " << labels_[it.graph_vertex_id];
 
-          if (it.distance + substitution_penalty_ == previous_it.distance) {
-            std::cerr << " op: M";
-          }
+        //  if (it.distance + substitution_penalty_ == previous_it.distance) {
+        //    std::cerr << " op: M";
+        //  }
 
-          if (it.graph_vertex_id == previous_it.graph_vertex_id &&
-              it.distance + deletion_penalty_ == previous_it.distance) {
-            std::cerr << " op: D";
-          }
+        //  if (it.graph_vertex_id == previous_it.graph_vertex_id &&
+        //      it.distance + deletion_penalty_ == previous_it.distance) {
+        //    std::cerr << " op: D";
+        //  }
 
-          if (it.query_index == previous_it.query_index) {
-            std::cerr << " op: I";
-          }
-          std::cerr << std::endl;
-          previous_it = it;
-          it = vertex_parent[it.graph_vertex_id][it.query_index];
-        }
-        std::cerr << std::endl;
+        //  if (it.query_index == previous_it.query_index) {
+        //    std::cerr << " op: I";
+        //  }
+        //  std::cerr << std::endl;
+        //  previous_it = it;
+        //  it = vertex_parent[it.graph_vertex_id][it.query_index];
+        //}
+        //std::cerr << std::endl;
         break;
       }
 
@@ -742,13 +742,12 @@ class SequenceGraph {
             Q.push({/*graph_vertex_id=*/neighbor,
                     /*query_index=*/current_vertex.query_index,
                     /*distance=*/new_deletion_distance});
-            vertex_parent[neighbor][current_vertex.query_index] =
-                VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
-                                              ScoreType>{
-                    /*graph_vertex_id=*/current_vertex.graph_vertex_id,
-                    /*query_index=*/current_vertex.query_index,
-                    /*distance=*/current_vertex.distance};
-
+            //vertex_parent[neighbor][current_vertex.query_index] =
+            //    VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
+            //                                  ScoreType>{
+            //        /*graph_vertex_id=*/current_vertex.graph_vertex_id,
+            //        /*query_index=*/current_vertex.query_index,
+            //        /*distance=*/current_vertex.distance};
             // std::cerr << "PUSH: " << neighbor << " "
             //          << current_vertex.query_index << " "
             //          << new_deletion_distance << std::endl;
@@ -760,12 +759,12 @@ class SequenceGraph {
           Q.push({/*graph_vertex_id=*/neighbor,
                   /*query_index=*/current_vertex.query_index,
                   /*distance=*/new_deletion_distance});
-          vertex_parent[neighbor][current_vertex.query_index] =
-              VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
-                                            ScoreType>{
-                  /*graph_vertex_id=*/current_vertex.graph_vertex_id,
-                  /*query_index=*/current_vertex.query_index,
-                  /*distance=*/current_vertex.distance};
+          //vertex_parent[neighbor][current_vertex.query_index] =
+          //    VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
+          //                                  ScoreType>{
+          //        /*graph_vertex_id=*/current_vertex.graph_vertex_id,
+          //        /*query_index=*/current_vertex.query_index,
+          //        /*distance=*/current_vertex.distance};
 
           // std::cerr << "PUSH: " << neighbor << " " <<
           // current_vertex.query_index
@@ -800,12 +799,12 @@ class SequenceGraph {
             Q.push({/*graph_vertex_id=*/neighbor,
                     /*query_index=*/query_index,
                     /*distance=*/new_match_or_mismatch_distance});
-            vertex_parent[neighbor][query_index] =
-                VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
-                                              ScoreType>{
-                    /*graph_vertex_id=*/current_vertex.graph_vertex_id,
-                    /*query_index=*/current_vertex.query_index,
-                    /*distance=*/current_vertex.distance};
+            //vertex_parent[neighbor][query_index] =
+            //    VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
+            //                                  ScoreType>{
+            //        /*graph_vertex_id=*/current_vertex.graph_vertex_id,
+            //        /*query_index=*/current_vertex.query_index,
+            //        /*distance=*/current_vertex.distance};
 
             // std::cerr << "PUSH: " << neighbor << " " << query_index << " "
             //          << new_match_or_mismatch_distance << std::endl;
@@ -818,12 +817,12 @@ class SequenceGraph {
           Q.push({/*graph_vertex_id=*/neighbor,
                   /*query_index=*/query_index,
                   /*distance=*/new_match_or_mismatch_distance});
-          vertex_parent[neighbor][query_index] =
-              VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
-                                            ScoreType>{
-                  /*graph_vertex_id=*/current_vertex.graph_vertex_id,
-                  /*query_index=*/current_vertex.query_index,
-                  /*distance=*/current_vertex.distance};
+          //vertex_parent[neighbor][query_index] =
+          //    VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
+          //                                  ScoreType>{
+          //        /*graph_vertex_id=*/current_vertex.graph_vertex_id,
+          //        /*query_index=*/current_vertex.query_index,
+          //        /*distance=*/current_vertex.distance};
 
           // std::cerr << "PUSH: " << neighbor << " " << query_index << " "
           //          << new_match_or_mismatch_distance << std::endl;
@@ -847,12 +846,12 @@ class SequenceGraph {
           Q.push({/*graph_vertex_id=*/current_vertex.graph_vertex_id,
                   /*query_index=*/query_index,
                   /*distance=*/new_insertion_distance});
-          vertex_parent[current_vertex.graph_vertex_id][query_index] =
-              VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
-                                            ScoreType>{
-                  /*graph_vertex_id=*/current_vertex.graph_vertex_id,
-                  /*query_index=*/current_vertex.query_index,
-                  /*distance=*/current_vertex.distance};
+          //vertex_parent[current_vertex.graph_vertex_id][query_index] =
+          //    VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
+          //                                  ScoreType>{
+          //        /*graph_vertex_id=*/current_vertex.graph_vertex_id,
+          //        /*query_index=*/current_vertex.query_index,
+          //        /*distance=*/current_vertex.distance};
 
           // std::cerr << "PUSH: " << current_vertex.graph_vertex_id << " "
           //          << query_index << " " << new_insertion_distance
@@ -866,12 +865,12 @@ class SequenceGraph {
         Q.push({/*graph_vertex_id=*/current_vertex.graph_vertex_id,
                 /*query_index=*/query_index,
                 /*distance=*/new_insertion_distance});
-        vertex_parent[current_vertex.graph_vertex_id][query_index] =
-            VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
-                                          ScoreType>{
-                /*graph_vertex_id=*/current_vertex.graph_vertex_id,
-                /*query_index=*/current_vertex.query_index,
-                /*distance=*/current_vertex.distance};
+        //vertex_parent[current_vertex.graph_vertex_id][query_index] =
+        //    VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
+        //                                  ScoreType>{
+        //        /*graph_vertex_id=*/current_vertex.graph_vertex_id,
+        //        /*query_index=*/current_vertex.query_index,
+        //        /*distance=*/current_vertex.distance};
 
         // std::cerr << "PUSH: " << current_vertex.graph_vertex_id << " "
         //          << query_index << " " << new_insertion_distance <<
