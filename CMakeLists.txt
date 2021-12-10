@@ -4,6 +4,7 @@ project(SGA DESCRIPTION "Implementation of sequence to graph alignment algorithm
 
 # SGA and GoogleTest require at least C++11
 set(CMAKE_CXX_STANDARD 11)
+message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
 add_subdirectory(src)
 add_subdirectory(apps)
