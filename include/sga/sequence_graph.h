@@ -7,12 +7,22 @@
 #include <queue>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "sequence.h"
 #include "utils.h"
 
 namespace sga {
+
+template <class GraphSizeType = int32_t, class QueryLengthType = int16_t,
+          class ScoreType = int16_t>
+struct VertexWithDistanceForDijkstra {
+  GraphSizeType graph_vertex_id;
+  QueryLengthType query_index;
+  ScoreType distance;
+};
+
 template <class GraphSizeType = int32_t, class QueryLengthType = int16_t,
           class ScoreType = int16_t>
 class SequenceGraph {
@@ -594,6 +604,325 @@ class SequenceGraph {
               << reverse_complement_alignment_cost
               << ", alignment cost:" << min_alignment_cost
               << ", num propogations: " << num_propagations << std::endl;
+    return min_alignment_cost;
+  }
+
+  ScoreType AlignUsingLinearGapPenaltyWithDijkstraAlgorithmOnPositiveDirection(
+      const sga::Sequence &sequence, GraphSizeType &num_cells) {
+    const GraphSizeType num_vertices = GetNumVertices();
+    const QueryLengthType sequence_length = sequence.GetLength();
+    const std::string &sequence_bases = sequence.GetSequence();
+
+    std::vector<std::unordered_map<QueryLengthType, ScoreType>>
+        vertex_distances(num_vertices);
+
+    std::vector<std::unordered_map<
+        QueryLengthType, VertexWithDistanceForDijkstra<
+                             GraphSizeType, QueryLengthType, ScoreType>>>
+        vertex_parent(num_vertices);
+
+    auto compare_function =
+        [](const VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
+                                               ScoreType> &v1,
+           const VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
+                                               ScoreType> &v2) {
+          if (v1.distance > v2.distance) {
+            return true;
+          }
+
+          if (v1.distance == v2.distance) {
+            if (v1.query_index < v2.query_index) {
+              return true;
+            }
+            if (v1.query_index == v2.query_index) {
+              if (v1.graph_vertex_id > v2.graph_vertex_id) {
+                return true;
+              }
+              return false;
+            }
+            return false;
+          }
+          return false;
+        };
+
+    std::priority_queue<VertexWithDistanceForDijkstra<
+                            GraphSizeType, QueryLengthType, ScoreType>,
+                        std::vector<VertexWithDistanceForDijkstra<
+                            GraphSizeType, QueryLengthType, ScoreType>>,
+                        decltype(compare_function)>
+        Q(compare_function);
+
+    num_cells = 0;
+
+    for (GraphSizeType vertex = 0; vertex < num_vertices; ++vertex) {
+      ScoreType cost = 0;
+      if (sequence_bases[0] != labels_[vertex]) {
+        cost = substitution_penalty_;
+      }
+      cost = std::min(cost, insertion_penalty_);
+
+      Q.push(
+          {/*graph_vertex_id=*/vertex, /*query_index=*/0, /*distance=*/cost});
+      ++num_cells;
+      vertex_distances[vertex][0] = cost;
+      vertex_parent[vertex][0] =
+          VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
+                                        ScoreType>{
+              /*graph_vertex_id=*/vertex, /*query_index=*/0, /*distance=*/cost};
+      // std::cerr << "Init PUSH: " << vertex << " " << 0 << " " << cost
+      //          << std::endl;
+    }
+
+    ScoreType min_alignment_cost = 0;
+
+    while (!Q.empty()) {
+      const auto current_vertex = Q.top();
+      Q.pop();
+      // if (current_vertex.distance <= 3) {
+      // std::cerr << "vi: " << current_vertex.graph_vertex_id
+      //          << " qi: " << current_vertex.query_index
+      //          << " d: " << current_vertex.distance << std::endl;
+      //}
+
+      // Check if we reach the last layer where we can stop.
+      if (current_vertex.query_index + 1 == sequence_length) {
+        min_alignment_cost = current_vertex.distance;
+        auto previous_it =
+            VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
+                                          ScoreType>{-1, -1, 0};
+        auto it = current_vertex;
+        while (!(it.graph_vertex_id == previous_it.graph_vertex_id &&
+                 it.query_index == previous_it.query_index)) {
+          std::cerr << "Traceback: "
+                    << "gi: " << it.graph_vertex_id << " qi: " << it.query_index
+                    << " d: " << it.distance
+                    << " qb: " << sequence_bases[it.query_index]
+                    << " gb: " << labels_[it.graph_vertex_id];
+
+          if (it.distance + substitution_penalty_ == previous_it.distance) {
+            std::cerr << " op: M";
+          }
+
+          if (it.graph_vertex_id == previous_it.graph_vertex_id &&
+              it.distance + deletion_penalty_ == previous_it.distance) {
+            std::cerr << " op: D";
+          }
+
+          if (it.query_index == previous_it.query_index) {
+            std::cerr << " op: I";
+          }
+          std::cerr << std::endl;
+          previous_it = it;
+          it = vertex_parent[it.graph_vertex_id][it.query_index];
+        }
+        std::cerr << std::endl;
+        // std::cerr << "Traceback: " << it.graph_vertex_id << " "
+        //          << it.query_index << " " << it.distance
+        //          << " qb: " << sequence_bases[it.query_index]
+        //          << " gb: " << labels_[it.graph_vertex_id] << std::endl;
+        break;
+      }
+
+      // Explore its neighbors.
+      for (GraphSizeType neighbor_index =
+               look_up_table_[current_vertex.graph_vertex_id];
+           neighbor_index < look_up_table_[current_vertex.graph_vertex_id + 1];
+           ++neighbor_index) {
+        const GraphSizeType neighbor = neighbor_table_[neighbor_index];
+
+        // Process neighbors in the same layaer.
+        const ScoreType new_deletion_distance =
+            current_vertex.distance + deletion_penalty_;
+
+        if (vertex_distances[neighbor].find(current_vertex.query_index) !=
+            vertex_distances[neighbor].end()) {
+          if (new_deletion_distance <
+              vertex_distances[neighbor][current_vertex.query_index]) {
+            vertex_distances[neighbor][current_vertex.query_index] =
+                new_deletion_distance;
+            Q.push({/*graph_vertex_id=*/neighbor,
+                    /*query_index=*/current_vertex.query_index,
+                    /*distance=*/new_deletion_distance});
+            vertex_parent[neighbor][current_vertex.query_index] =
+                VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
+                                              ScoreType>{
+                    /*graph_vertex_id=*/current_vertex.graph_vertex_id,
+                    /*query_index=*/current_vertex.query_index,
+                    /*distance=*/current_vertex.distance};
+
+            // std::cerr << "PUSH: " << neighbor << " "
+            //          << current_vertex.query_index << " "
+            //          << new_deletion_distance << std::endl;
+            ++num_cells;
+          }
+        } else {
+          vertex_distances[neighbor][current_vertex.query_index] =
+              new_deletion_distance;
+          Q.push({/*graph_vertex_id=*/neighbor,
+                  /*query_index=*/current_vertex.query_index,
+                  /*distance=*/new_deletion_distance});
+          vertex_parent[neighbor][current_vertex.query_index] =
+              VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
+                                            ScoreType>{
+                  /*graph_vertex_id=*/current_vertex.graph_vertex_id,
+                  /*query_index=*/current_vertex.query_index,
+                  /*distance=*/current_vertex.distance};
+
+          // std::cerr << "PUSH: " << neighbor << " " <<
+          // current_vertex.query_index
+          //          << " " << new_deletion_distance << std::endl;
+          ++num_cells;
+        }
+
+        // Process neighbors in the next layaer.
+        const QueryLengthType query_index = current_vertex.query_index + 1;
+
+        ScoreType cost = 0;
+        if (sequence_bases[query_index] != labels_[neighbor]) {
+          cost = substitution_penalty_;
+        }
+
+        const ScoreType new_match_or_mismatch_distance =
+            std::min(current_vertex.distance,
+                     (ScoreType)(deletion_penalty_ * query_index)) +
+            cost;
+
+        // std::cerr << "seq base: " << sequence_bases[query_index] << " label:
+        // " << labels_[neighbor] << " cost: " << cost << " d: " <<
+        // new_match_or_mismatch_distance << std::endl;
+
+        if (vertex_distances[neighbor].find(query_index) !=
+            vertex_distances[neighbor].end()) {
+          if (new_match_or_mismatch_distance <
+              vertex_distances[neighbor][query_index]) {
+            vertex_distances[neighbor][query_index] =
+                new_match_or_mismatch_distance;
+
+            Q.push({/*graph_vertex_id=*/neighbor,
+                    /*query_index=*/query_index,
+                    /*distance=*/new_match_or_mismatch_distance});
+            vertex_parent[neighbor][query_index] =
+                VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
+                                              ScoreType>{
+                    /*graph_vertex_id=*/current_vertex.graph_vertex_id,
+                    /*query_index=*/current_vertex.query_index,
+                    /*distance=*/current_vertex.distance};
+
+            // std::cerr << "PUSH: " << neighbor << " " << query_index << " "
+            //          << new_match_or_mismatch_distance << std::endl;
+            ++num_cells;
+          }
+        } else {
+          vertex_distances[neighbor][query_index] =
+              new_match_or_mismatch_distance;
+
+          Q.push({/*graph_vertex_id=*/neighbor,
+                  /*query_index=*/query_index,
+                  /*distance=*/new_match_or_mismatch_distance});
+          vertex_parent[neighbor][query_index] =
+              VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
+                                            ScoreType>{
+                  /*graph_vertex_id=*/current_vertex.graph_vertex_id,
+                  /*query_index=*/current_vertex.query_index,
+                  /*distance=*/current_vertex.distance};
+
+          // std::cerr << "PUSH: " << neighbor << " " << query_index << " "
+          //          << new_match_or_mismatch_distance << std::endl;
+          ++num_cells;
+        }
+      }  // End for exploring neighbor.
+
+      // Process insertions to the next layaer.
+      const QueryLengthType query_index = current_vertex.query_index + 1;
+
+      const ScoreType new_insertion_distance =
+          current_vertex.distance + insertion_penalty_;
+
+      if (vertex_distances[current_vertex.graph_vertex_id].find(query_index) !=
+          vertex_distances[current_vertex.graph_vertex_id].end()) {
+        if (new_insertion_distance <
+            vertex_distances[current_vertex.graph_vertex_id][query_index]) {
+          vertex_distances[current_vertex.graph_vertex_id][query_index] =
+              new_insertion_distance;
+
+          Q.push({/*graph_vertex_id=*/current_vertex.graph_vertex_id,
+                  /*query_index=*/query_index,
+                  /*distance=*/new_insertion_distance});
+          vertex_parent[current_vertex.graph_vertex_id][query_index] =
+              VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
+                                            ScoreType>{
+                  /*graph_vertex_id=*/current_vertex.graph_vertex_id,
+                  /*query_index=*/current_vertex.query_index,
+                  /*distance=*/current_vertex.distance};
+
+          // std::cerr << "PUSH: " << current_vertex.graph_vertex_id << " "
+          //          << query_index << " " << new_insertion_distance
+          //          << std::endl;
+          ++num_cells;
+        }
+      } else {
+        vertex_distances[current_vertex.graph_vertex_id][query_index] =
+            new_insertion_distance;
+
+        Q.push({/*graph_vertex_id=*/current_vertex.graph_vertex_id,
+                /*query_index=*/query_index,
+                /*distance=*/new_insertion_distance});
+        vertex_parent[current_vertex.graph_vertex_id][query_index] =
+            VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
+                                          ScoreType>{
+                /*graph_vertex_id=*/current_vertex.graph_vertex_id,
+                /*query_index=*/current_vertex.query_index,
+                /*distance=*/current_vertex.distance};
+
+        // std::cerr << "PUSH: " << current_vertex.graph_vertex_id << " "
+        //          << query_index << " " << new_insertion_distance <<
+        //          std::endl;
+        ++num_cells;
+      }
+    }
+
+    // std::cerr << "Sequence length: " << sequence_length
+    //          << ", forward alignment cost:" << forward_alignment_cost
+    //          << ", reverse complement alignment cost:"
+    //          << reverse_complement_alignment_cost
+    //          << ", alignment cost:" << min_alignment_cost << std::endl;
+    return min_alignment_cost;
+  }
+
+  ScoreType AlignUsingLinearGapPenaltyWithDijkstraAlgorithm(
+      const sga::Sequence &sequence) {
+    const QueryLengthType sequence_length = sequence.GetLength();
+    const std::string &sequence_bases = sequence.GetSequence();
+    GraphSizeType forward_num_cells = 0;
+    const ScoreType forward_alignment_cost =
+        AlignUsingLinearGapPenaltyWithDijkstraAlgorithmOnPositiveDirection(
+            sequence, forward_num_cells);
+
+    // For reverse complement.
+    std::string rc_sequence_bases;
+    for (QueryLengthType i = 0; i < sequence_length; ++i) {
+      rc_sequence_bases.push_back(
+          base_complement_[(int)sequence_bases[sequence_length - 1 - i]]);
+    }
+
+    Sequence reverse_complement_sequence(
+        sequence_length, sequence.GetName().data(), rc_sequence_bases.data());
+
+    GraphSizeType rc_num_cells = 0;
+    const ScoreType reverse_complement_alignment_cost =
+        AlignUsingLinearGapPenaltyWithDijkstraAlgorithmOnPositiveDirection(
+            reverse_complement_sequence, rc_num_cells);
+
+    const ScoreType min_alignment_cost =
+        std::min(forward_alignment_cost, reverse_complement_alignment_cost);
+
+    std::cerr << "Sequence length: " << sequence_length
+              << ", forward alignment cost:" << forward_alignment_cost
+              << ", reverse complement alignment cost:"
+              << reverse_complement_alignment_cost
+              << ", alignment cost:" << min_alignment_cost
+              << ", forward num cells:" << forward_num_cells
+              << ", reverse num cells: " << rc_num_cells << std::endl;
     return min_alignment_cost;
   }
 
