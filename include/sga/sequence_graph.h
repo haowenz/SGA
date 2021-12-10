@@ -92,6 +92,10 @@ class SequenceGraph {
 
     GraphSizeType num_vertices = 0;
     GraphSizeType row_index = 0;
+
+    compacted_graph_labels_.emplace_back("N");
+    compacted_graph_adjacency_list_.emplace_back(std::vector<GraphSizeType>());
+
     while (std::getline(infile, line)) {
       std::istringstream inputString(line);
       // get count of vertices from header row
@@ -111,12 +115,16 @@ class SequenceGraph {
         compacted_graph_labels_.emplace_back(tokens.back());
         for (auto it = tokens.begin();
              it != tokens.end() && std::next(it) != tokens.end(); it++) {
-          compacted_graph_adjacency_list_[row_index - 1].emplace_back(
-              stoi(*it));
+          compacted_graph_adjacency_list_.back().emplace_back(stoi(*it) + 1);
         }
       }
       row_index++;
     }
+
+    std::cerr << "# vertices in compacted graph: "
+              << GetNumVerticesInCompactedGraph()
+              << ", # edges in compacted graph: "
+              << GetNumEdgesInCompactedGraph() << std::endl;
   }
 
   void OutputCompactedGraphInGFA(std::string &output_file_path) {
@@ -678,11 +686,6 @@ class SequenceGraph {
     while (!Q.empty()) {
       const auto current_vertex = Q.top();
       Q.pop();
-      // if (current_vertex.distance <= 3) {
-      // std::cerr << "vi: " << current_vertex.graph_vertex_id
-      //          << " qi: " << current_vertex.query_index
-      //          << " d: " << current_vertex.distance << std::endl;
-      //}
 
       // Check if we reach the last layer where we can stop.
       if (current_vertex.query_index + 1 == sequence_length) {
@@ -716,10 +719,6 @@ class SequenceGraph {
           it = vertex_parent[it.graph_vertex_id][it.query_index];
         }
         std::cerr << std::endl;
-        // std::cerr << "Traceback: " << it.graph_vertex_id << " "
-        //          << it.query_index << " " << it.distance
-        //          << " qb: " << sequence_bases[it.query_index]
-        //          << " gb: " << labels_[it.graph_vertex_id] << std::endl;
         break;
       }
 
