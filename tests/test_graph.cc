@@ -28,34 +28,36 @@ class SequenceGraphTest : public ::testing::Test {
 };
 
 TEST_F(SequenceGraphTest, LoadFromTxtFileTest) {
-  uint32_t num_vertices = txt_sequence_graph_.GetNumVerticesInCompactedGraph();
+  const uint32_t num_vertices =
+      txt_sequence_graph_.GetNumVerticesInCompactedGraph() - 1;
   EXPECT_EQ(num_vertices, (uint32_t)2320)
       << "Number of vertices loaded is wrong! It should be 2320 but it is "
       << num_vertices;
-  uint32_t num_edges = txt_sequence_graph_.GetNumEdgesInCompactedGraph();
+  const uint32_t num_edges = txt_sequence_graph_.GetNumEdgesInCompactedGraph();
   EXPECT_EQ(num_edges, (uint32_t)2320)
-      << "Number of edges loaded is wrong! It should be 2319 but it is "
+      << "Number of edges loaded is wrong! It should be 2320 but it is "
       << num_edges;
 }
 
 TEST_F(SequenceGraphTest, GenerateCharLabeledGraphTest) {
-  uint32_t num_vertices = txt_sequence_graph_.GetNumVertices();
+  const uint32_t num_vertices = txt_sequence_graph_.GetNumVertices() - 1;
   EXPECT_EQ(num_vertices, (uint32_t)139189)
       << "Number of vertices loaded is wrong! It should be 139189 but it is "
       << num_vertices;
-  uint32_t num_edges = txt_sequence_graph_.GetNumEdges();
+  const uint32_t num_edges = txt_sequence_graph_.GetNumEdges();
   EXPECT_EQ(num_edges, (uint32_t)(139189))
-      << "Number of edges loaded is wrong! It should be 139188 but it is "
+      << "Number of edges loaded is wrong! It should be 139189 but it is "
       << num_edges;
 }
 
 TEST_F(SequenceGraphTest, AlignUsingLinearGapPenaltyTest) {
-  uint32_t num_loaded_sequences = sequence_batch_.LoadBatch();
-  int32_t max_alignment_scores[5] = {62, 25, 54, 9, 37};
+  const uint32_t num_loaded_sequences = sequence_batch_.LoadBatch();
+  const int32_t max_alignment_scores[5] = {62, 25, 54, 9, 37};
   txt_sequence_graph_.SetAlignmentParameters(1, 1, 1);
   for (uint32_t i = 0; i < num_loaded_sequences; ++i) {
-    int32_t alignment_score = txt_sequence_graph_.AlignUsingLinearGapPenalty(
-        sequence_batch_.GetSequence(i));
+    const int32_t alignment_score =
+        txt_sequence_graph_.AlignUsingLinearGapPenalty(
+            sequence_batch_.GetSequence(i));
     EXPECT_EQ(alignment_score, max_alignment_scores[i])
         << "Alignment score for sequence" << i << " is wrong! It should be "
         << max_alignment_scores[i] << " but it is " << alignment_score;
@@ -63,12 +65,26 @@ TEST_F(SequenceGraphTest, AlignUsingLinearGapPenaltyTest) {
 }
 
 TEST_F(SequenceGraphTest, AlignUsingLinearGapPenaltyWithNavarroAlgorithmTest) {
-  uint32_t num_loaded_sequences = sequence_batch_.LoadBatch();
-  int32_t max_alignment_scores[5] = {62, 25, 54, 9, 37};
+  const uint32_t num_loaded_sequences = sequence_batch_.LoadBatch();
+  const int32_t max_alignment_scores[5] = {62, 25, 54, 9, 37};
   txt_sequence_graph_.SetAlignmentParameters(1, 1, 1);
   for (uint32_t i = 0; i < num_loaded_sequences; ++i) {
-    int32_t alignment_score =
+    const int32_t alignment_score =
         txt_sequence_graph_.AlignUsingLinearGapPenaltyWithNavarroAlgorithm(
+            sequence_batch_.GetSequence(i));
+    EXPECT_EQ(alignment_score, max_alignment_scores[i])
+        << "Alignment score for sequence" << i << " is wrong! It should be "
+        << max_alignment_scores[i] << " but it is " << alignment_score;
+  }
+}
+
+TEST_F(SequenceGraphTest, AlignUsingLinearGapPenaltyWithDijkstraAlgorithmTest) {
+  const uint32_t num_loaded_sequences = sequence_batch_.LoadBatch();
+  const int32_t max_alignment_scores[5] = {62, 25, 54, 9, 37};
+  txt_sequence_graph_.SetAlignmentParameters(1, 1, 1);
+  for (uint32_t i = 0; i < num_loaded_sequences; ++i) {
+    const int32_t alignment_score =
+        txt_sequence_graph_.AlignUsingLinearGapPenaltyWithDijkstraAlgorithm(
             sequence_batch_.GetSequence(i));
     EXPECT_EQ(alignment_score, max_alignment_scores[i])
         << "Alignment score for sequence" << i << " is wrong! It should be "
