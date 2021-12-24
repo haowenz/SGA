@@ -202,6 +202,20 @@ class SequenceGraph {
     //}
   }
 
+  char GetReverseComplementaryVertexLabel(GraphSizeType vertex) const {
+    return base_complement_[(int)labels_[vertex]];
+  }
+
+  void GenerateReverseComplementaryCharLabeledGraph() {
+    reverse_complementary_adjacency_list_.assign(adjacency_list_.size(),
+                                                 std::vector<GraphSizeType>());
+    for (GraphSizeType vertex = 0; vertex < adjacency_list_.size(); ++vertex) {
+      for (const GraphSizeType neighbor : adjacency_list_[vertex]) {
+        reverse_complementary_adjacency_list_[neighbor].push_back(vertex);
+      }
+    }
+  }
+
   void PropagateInsertions(const std::vector<ScoreType> &initialized_layer,
                            const std::vector<GraphSizeType> &initialized_order,
                            std::vector<ScoreType> &current_layer,
@@ -624,7 +638,7 @@ class SequenceGraph {
     std::vector<std::unordered_map<QueryLengthType, ScoreType>>
         vertex_distances(num_vertices);
 
-    //std::vector<std::unordered_map<
+    // std::vector<std::unordered_map<
     //    QueryLengthType, VertexWithDistanceForDijkstra<
     //                         GraphSizeType, QueryLengthType, ScoreType>>>
     //    vertex_parent(num_vertices);
@@ -673,10 +687,11 @@ class SequenceGraph {
           {/*graph_vertex_id=*/vertex, /*query_index=*/0, /*distance=*/cost});
       ++num_cells;
       vertex_distances[vertex][0] = cost;
-      //vertex_parent[vertex][0] =
+      // vertex_parent[vertex][0] =
       //    VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
       //                                  ScoreType>{
-      //        /*graph_vertex_id=*/vertex, /*query_index=*/0, /*distance=*/cost};
+      //        /*graph_vertex_id=*/vertex, /*query_index=*/0,
+      //        /*distance=*/cost};
       // std::cerr << "Init PUSH: " << vertex << " " << 0 << " " << cost
       //          << std::endl;
     }
@@ -690,14 +705,15 @@ class SequenceGraph {
       // Check if we reach the last layer where we can stop.
       if (current_vertex.query_index + 1 == sequence_length) {
         min_alignment_cost = current_vertex.distance;
-        //auto previous_it =
+        // auto previous_it =
         //    VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
         //                                  ScoreType>{-1, -1, 0};
-        //auto it = current_vertex;
-        //while (!(it.graph_vertex_id == previous_it.graph_vertex_id &&
+        // auto it = current_vertex;
+        // while (!(it.graph_vertex_id == previous_it.graph_vertex_id &&
         //         it.query_index == previous_it.query_index)) {
         //  std::cerr << "Traceback: "
-        //            << "gi: " << it.graph_vertex_id << " qi: " << it.query_index
+        //            << "gi: " << it.graph_vertex_id << " qi: " <<
+        //            it.query_index
         //            << " d: " << it.distance
         //            << " qb: " << sequence_bases[it.query_index]
         //            << " gb: " << labels_[it.graph_vertex_id];
@@ -718,7 +734,7 @@ class SequenceGraph {
         //  previous_it = it;
         //  it = vertex_parent[it.graph_vertex_id][it.query_index];
         //}
-        //std::cerr << std::endl;
+        // std::cerr << std::endl;
         break;
       }
 
@@ -742,7 +758,7 @@ class SequenceGraph {
             Q.push({/*graph_vertex_id=*/neighbor,
                     /*query_index=*/current_vertex.query_index,
                     /*distance=*/new_deletion_distance});
-            //vertex_parent[neighbor][current_vertex.query_index] =
+            // vertex_parent[neighbor][current_vertex.query_index] =
             //    VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
             //                                  ScoreType>{
             //        /*graph_vertex_id=*/current_vertex.graph_vertex_id,
@@ -759,7 +775,7 @@ class SequenceGraph {
           Q.push({/*graph_vertex_id=*/neighbor,
                   /*query_index=*/current_vertex.query_index,
                   /*distance=*/new_deletion_distance});
-          //vertex_parent[neighbor][current_vertex.query_index] =
+          // vertex_parent[neighbor][current_vertex.query_index] =
           //    VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
           //                                  ScoreType>{
           //        /*graph_vertex_id=*/current_vertex.graph_vertex_id,
@@ -799,7 +815,7 @@ class SequenceGraph {
             Q.push({/*graph_vertex_id=*/neighbor,
                     /*query_index=*/query_index,
                     /*distance=*/new_match_or_mismatch_distance});
-            //vertex_parent[neighbor][query_index] =
+            // vertex_parent[neighbor][query_index] =
             //    VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
             //                                  ScoreType>{
             //        /*graph_vertex_id=*/current_vertex.graph_vertex_id,
@@ -817,7 +833,7 @@ class SequenceGraph {
           Q.push({/*graph_vertex_id=*/neighbor,
                   /*query_index=*/query_index,
                   /*distance=*/new_match_or_mismatch_distance});
-          //vertex_parent[neighbor][query_index] =
+          // vertex_parent[neighbor][query_index] =
           //    VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
           //                                  ScoreType>{
           //        /*graph_vertex_id=*/current_vertex.graph_vertex_id,
@@ -846,7 +862,7 @@ class SequenceGraph {
           Q.push({/*graph_vertex_id=*/current_vertex.graph_vertex_id,
                   /*query_index=*/query_index,
                   /*distance=*/new_insertion_distance});
-          //vertex_parent[current_vertex.graph_vertex_id][query_index] =
+          // vertex_parent[current_vertex.graph_vertex_id][query_index] =
           //    VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
           //                                  ScoreType>{
           //        /*graph_vertex_id=*/current_vertex.graph_vertex_id,
@@ -865,7 +881,7 @@ class SequenceGraph {
         Q.push({/*graph_vertex_id=*/current_vertex.graph_vertex_id,
                 /*query_index=*/query_index,
                 /*distance=*/new_insertion_distance});
-        //vertex_parent[current_vertex.graph_vertex_id][query_index] =
+        // vertex_parent[current_vertex.graph_vertex_id][query_index] =
         //    VertexWithDistanceForDijkstra<GraphSizeType, QueryLengthType,
         //                                  ScoreType>{
         //        /*graph_vertex_id=*/current_vertex.graph_vertex_id,
@@ -960,6 +976,12 @@ class SequenceGraph {
   std::vector<char> labels_;
   std::vector<std::vector<GraphSizeType>> compacted_graph_adjacency_list_;
   std::vector<std::string> compacted_graph_labels_;
+
+  // For reverse complementary graph representation. We make the vertex ids
+  // stable, and thus the vertex labels are just the corresponding reverse
+  // complementary base in labels_. However, we construct a separate adjacency
+  // list for fast neighbor queries in the reverse complementary graph.
+  std::vector<std::vector<GraphSizeType>> reverse_complementary_adjacency_list_;
 
   // For RECOMB work
   std::vector<GraphSizeType> order_look_up_table_;
