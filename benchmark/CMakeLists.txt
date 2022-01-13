@@ -1,0 +1,11 @@
+add_executable(SequenceGraphBenchmark sequence_graph_benchmark.cc)
+set_target_properties(SequenceGraphBenchmark PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/tests/data")
+get_target_property(benchmark_working_dir SequenceGraphBenchmark WORKING_DIRECTORY)
+message(STATUS "Benchmark working directory: " ${benchmark_working_dir})
+target_link_libraries(SequenceGraphBenchmark sga benchmark::benchmark)
+#gtest_add_tests(TARGET SequenceGraphTest WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/tests/data")
+
+#include(GoogleTest)
+#message(STATUS "cmake src dir: ${CMAKE_SOURCE_DIR}")
+#gtest_discover_tests(SequenceIOTest WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/tests/data")
+#gtest_discover_tests(SequenceGraphTest WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/tests/data")

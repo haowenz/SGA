@@ -25,3 +25,11 @@ if(SGA_BUILD_TESTING)
   enable_testing()
   add_subdirectory(tests)
 endif()
+
+option(SGA_BUILD_BENCHMARK "Build the benchmark")
+if(SGA_BUILD_BENCHMARK)
+  message(STATUS "Build the benchmark.")
+
+  add_subdirectory(extern/benchmark)
+  add_subdirectory(benchmark)
+endif()
