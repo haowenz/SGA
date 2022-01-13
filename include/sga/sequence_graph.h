@@ -246,12 +246,7 @@ class SequenceGraph {
         visited_[min_vertex] = true;
         current_order[current_order_index] = min_vertex;
         ++current_order_index;
-        // for (auto neighbor : adjacency_list_[min_vertex]) {
-        for (GraphSizeType neighbor_index = look_up_table_[min_vertex];
-             neighbor_index < look_up_table_[min_vertex + 1];
-             ++neighbor_index) {
-          GraphSizeType neighbor = neighbor_table_[neighbor_index];
-
+        for (const auto &neighbor : adjacency_list_[min_vertex]) {
           if (!visited_[neighbor] &&
               current_layer[neighbor] >
                   current_layer[min_vertex] + insertion_penalty_) {
@@ -340,10 +335,8 @@ class SequenceGraph {
       if (initialized_layer[i] > previous_layer[i] + deletion_penalty_) {
         initialized_layer[i] = previous_layer[i] + deletion_penalty_;
       }
-      // for (auto neighbor : adjacency_list_[i]) {
-      for (GraphSizeType neighbor_index = look_up_table_[i];
-           neighbor_index < look_up_table_[i + 1]; ++neighbor_index) {
-        const GraphSizeType neighbor = neighbor_table_[neighbor_index];
+
+      for (const auto &neighbor : adjacency_list_[i]) {
         ScoreType cost = 0;
 
         if (sequence_base != labels_[neighbor]) {
@@ -399,10 +392,7 @@ class SequenceGraph {
         types_[i] = 2;
       }
 
-      // for (auto neighbor : adjacency_list_[i]) {
-      for (GraphSizeType neighbor_index = look_up_table_[i];
-           neighbor_index < look_up_table_[i + 1]; ++neighbor_index) {
-        const GraphSizeType neighbor = neighbor_table_[neighbor_index];
+      for (const auto &neighbor : adjacency_list_[i]) {
         ScoreType cost = 0;
         int type = 0;
 
@@ -523,9 +513,7 @@ class SequenceGraph {
     num_propagations += 1;
     if (current_layer[to] > insertion_penalty_ + current_layer[from]) {
       current_layer[to] = insertion_penalty_ + current_layer[from];
-      for (GraphSizeType neighbor_index = look_up_table_[to];
-           neighbor_index < look_up_table_[to + 1]; ++neighbor_index) {
-        const GraphSizeType neighbor = neighbor_table_[neighbor_index];
+      for (const auto &neighbor : adjacency_list_[to]) {
         PropagateWithNavarroAlgorithm(to, neighbor, num_propagations,
                                       current_layer);
       }
@@ -555,10 +543,8 @@ class SequenceGraph {
       if (current_layer[i] > previous_layer[i] + deletion_penalty_) {
         current_layer[i] = previous_layer[i] + deletion_penalty_;
       }
-      // for (auto neighbor : adjacency_list_[i]) {
-      for (GraphSizeType neighbor_index = look_up_table_[i];
-           neighbor_index < look_up_table_[i + 1]; ++neighbor_index) {
-        const GraphSizeType neighbor = neighbor_table_[neighbor_index];
+
+      for (const auto &neighbor : adjacency_list_[i]) {
         QueryLengthType cost = 0;
 
         if (sequence_base != labels_[neighbor]) {
@@ -572,9 +558,7 @@ class SequenceGraph {
     }
 
     for (GraphSizeType i = 1; i < num_vertices; ++i) {
-      for (GraphSizeType neighbor_index = look_up_table_[i];
-           neighbor_index < look_up_table_[i + 1]; ++neighbor_index) {
-        const GraphSizeType neighbor = neighbor_table_[neighbor_index];
+      for (const auto &neighbor : adjacency_list_[i]) {
         PropagateWithNavarroAlgorithm(i, neighbor, num_propagations,
                                       current_layer);
       }
@@ -739,12 +723,8 @@ class SequenceGraph {
       }
 
       // Explore its neighbors.
-      for (GraphSizeType neighbor_index =
-               look_up_table_[current_vertex.graph_vertex_id];
-           neighbor_index < look_up_table_[current_vertex.graph_vertex_id + 1];
-           ++neighbor_index) {
-        const GraphSizeType neighbor = neighbor_table_[neighbor_index];
-
+      for (const auto &neighbor :
+           adjacency_list_[current_vertex.graph_vertex_id]) {
         // Process neighbors in the same layaer.
         const ScoreType new_deletion_distance =
             current_vertex.distance + deletion_penalty_;
