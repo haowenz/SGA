@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "gfa.h"
 #include "sequence.h"
 #include "utils.h"
 
@@ -93,6 +94,125 @@ class SequenceGraph {
     insertion_penalty_ = insertion_penalty;
   }
 
+  void AddReverseComplementaryVertexIfNecessary(
+      const gfa_t *gfa_graph, uint32_t gfa_vertex_id,
+      std::vector<GraphSizeType> &reverse_complementary_compacted_vertex_id) {
+    const uint32_t gfa_segment_id = gfa_vertex_id >> 1;
+    const GraphSizeType vertex_id = gfa_segment_id + 1;
+    const bool is_gfa_segment_forward = ((gfa_vertex_id & 1) == 0);
+    const bool vertex_rc_is_not_added =
+        (reverse_complementary_compacted_vertex_id[vertex_id] == vertex_id);
+
+    // std::cerr << "gfa_vi: " << gfa_vertex_id << " si: " << gfa_segment_id
+    //          << " rcvi: "
+    //          << reverse_complementary_compacted_vertex_id[vertex_id]
+    //          << " vi: " << vertex_id << " forward:" << is_gfa_segment_forward
+    //          << std::endl;
+    if (!is_gfa_segment_forward && vertex_rc_is_not_added) {
+      const gfa_seg_t &gfa_segment = gfa_graph->seg[gfa_segment_id];
+      std::string rc_sequence_bases;
+      for (QueryLengthType qi = 0; qi < (QueryLengthType)gfa_segment.len;
+           ++qi) {
+        rc_sequence_bases.push_back(
+            base_complement_[(int)gfa_segment.seq
+                                 [(QueryLengthType)gfa_segment.len - 1 - qi]]);
+      }
+
+      compacted_graph_labels_.emplace_back(rc_sequence_bases);
+      compacted_graph_adjacency_list_.emplace_back(
+          std::vector<GraphSizeType>());
+
+      const uint32_t new_compacted_graph_rc_vertex_id =
+          compacted_graph_adjacency_list_.size() - 1;
+      reverse_complementary_compacted_vertex_id[vertex_id] =
+          new_compacted_graph_rc_vertex_id;
+    }
+  }
+
+  void AddEdge(const gfa_t *gfa_graph, const gfa_arc_t &gfa_arc,
+               const std::vector<GraphSizeType>
+                   &reverse_complementary_compacted_vertex_id) {
+    const uint32_t gfa_head_vertex_id = gfa_arc_head(gfa_arc);
+    const uint32_t gfa_head_segment_id = gfa_head_vertex_id >> 1;
+    const bool is_gfa_head_segment_forward = ((gfa_head_vertex_id & 1) == 0);
+
+    GraphSizeType head_vertex_id = gfa_head_segment_id + 1;
+    if (!is_gfa_head_segment_forward) {
+      head_vertex_id =
+          reverse_complementary_compacted_vertex_id[head_vertex_id];
+    }
+
+    const uint32_t gfa_tail_vertex_id = gfa_arc_tail(gfa_arc);
+    const uint32_t gfa_tail_segment_id = gfa_tail_vertex_id >> 1;
+    const bool is_gfa_tail_segment_forward = ((gfa_tail_vertex_id & 1) == 0);
+
+    GraphSizeType tail_vertex_id = gfa_tail_segment_id + 1;
+    if (!is_gfa_tail_segment_forward) {
+      tail_vertex_id =
+          reverse_complementary_compacted_vertex_id[tail_vertex_id];
+    }
+
+    compacted_graph_adjacency_list_[head_vertex_id].emplace_back(
+        tail_vertex_id);
+  }
+
+  // An algorithm to convert a GFA to a compacted sequence graph with two passes
+  // on arcs and one pass on segments. We assume there is no overlap. The
+  // algorithm first passes the arcs to know which node needs to be duplicated
+  // for a reverse complement. Then the segments are parsed to create the
+  // vertices and labels. Finally the arcs are parsed again to add the edges.
+  void LoadFromGfaFile(const std::string &graph_file_path) {
+    gfa_t *gfa_graph = gfa_read(graph_file_path.data());
+    // gfa_print(gfa_graph, stderr, 0);
+
+    std::vector<GraphSizeType> reverse_complementary_compacted_vertex_id;
+
+    const uint32_t num_segments = gfa_graph->n_seg;
+    reverse_complementary_compacted_vertex_id.reserve(num_segments);
+    compacted_graph_labels_.reserve(num_segments);
+    compacted_graph_adjacency_list_.reserve(num_segments);
+
+    // Add a dummy vertex.
+    compacted_graph_labels_.emplace_back("N");
+    reverse_complementary_compacted_vertex_id.emplace_back(0);
+    compacted_graph_adjacency_list_.emplace_back(std::vector<GraphSizeType>());
+
+    for (uint32_t si = 0; si < num_segments; ++si) {
+      const gfa_seg_t &current_segment = gfa_graph->seg[si];
+      compacted_graph_labels_.emplace_back(std::string(current_segment.seq));
+
+      const uint32_t compacted_graph_vertex_id = si + 1;
+      reverse_complementary_compacted_vertex_id.emplace_back(
+          compacted_graph_vertex_id);
+
+      compacted_graph_adjacency_list_.emplace_back(
+          std::vector<GraphSizeType>());
+    }
+
+    const uint64_t num_arcs = gfa_graph->n_arc;
+    // std::cerr << "NUM ARCS: " << num_arcs << std::endl;
+    const gfa_arc_t *gfa_arcs = gfa_graph->arc;
+
+    for (uint64_t ai = 0; ai < num_arcs; ++ai) {
+      if (gfa_arcs[ai].del || gfa_arcs[ai].comp) continue;
+      const uint32_t gfa_head_vertex_id = gfa_arc_head(gfa_arcs[ai]);
+      AddReverseComplementaryVertexIfNecessary(
+          gfa_graph, gfa_head_vertex_id,
+          reverse_complementary_compacted_vertex_id);
+
+      const uint32_t gfa_tail_vertex_id = gfa_arc_tail(gfa_arcs[ai]);
+      AddReverseComplementaryVertexIfNecessary(
+          gfa_graph, gfa_tail_vertex_id,
+          reverse_complementary_compacted_vertex_id);
+    }
+
+    for (uint64_t ai = 0; ai < num_arcs; ++ai) {
+      if (gfa_arcs[ai].del || gfa_arcs[ai].comp) continue;
+      AddEdge(gfa_graph, gfa_arcs[ai],
+              reverse_complementary_compacted_vertex_id);
+    }
+  }
+
   void LoadFromTxtFile(const std::string &graph_file_path) {
     std::string line;
     std::ifstream infile(graph_file_path);
@@ -137,11 +257,12 @@ class SequenceGraph {
   void OutputCompactedGraphInGFA(std::string &output_file_path) {
     std::ofstream outstrm(output_file_path);
     outstrm << "H\tVN:Z:1.0\n";
-    for (uint32_t i = 0; i < compacted_graph_labels_.size(); ++i) {
+    // Both for loops start from 1 to skip the dummy vertex.
+    for (uint32_t i = 1; i < compacted_graph_labels_.size(); ++i) {
       outstrm << "S\t" << i << "\t" << compacted_graph_labels_[i] << "\n";
     }
 
-    for (uint32_t i = 0; i < compacted_graph_adjacency_list_.size(); ++i) {
+    for (uint32_t i = 1; i < compacted_graph_adjacency_list_.size(); ++i) {
       for (auto neighbor : compacted_graph_adjacency_list_[i]) {
         outstrm << "L\t" << i << "\t+\t" << neighbor << "\t+\t0M\n";
       }

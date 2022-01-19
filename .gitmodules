@@ -1,3 +1,6 @@
 [submodule "extern/benchmark"]
 	path = extern/benchmark
 	url = git@github.com:google/benchmark.git
+[submodule "extern/gfatools"]
+	path = extern/gfatools
+	url = git@github.com:lh3/gfatools.git
