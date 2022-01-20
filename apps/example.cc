@@ -2,6 +2,7 @@
 
 #include "sequence_batch.h"
 #include "sequence_graph.h"
+#include "utils.h"
 
 int main(int argc, char *argv[]) {
   std::string sequence_graph_file_path;
@@ -17,17 +18,27 @@ int main(int argc, char *argv[]) {
   sga::SequenceGraph<> sequence_graph;
   sequence_graph.SetAlignmentParameters(2, 3, 3);
   sga::SequenceBatch sequence_batch(max_batch_size);
-  sequence_graph.LoadFromTxtFile(sequence_graph_file_path);
+  sequence_graph.LoadFromGfaFile(sequence_graph_file_path);
   sequence_graph.GenerateCharLabeledGraph();
   sequence_graph.GenerateCompressedRepresentation();
   sequence_batch.InitializeLoading(sequence_file_path);
   uint32_t num_sequences = sequence_batch.LoadBatch();
+  uint64_t num_total_sequences = 0;
+
+  double mapping_start_real_time = sga::GetRealTime();
+
   while (num_sequences > 0) {
     for (uint32_t si = 0; si < num_sequences; ++si) {
-      sequence_graph.AlignUsingLinearGapPenaltyWithNavarroAlgorithm(
+      //sequence_graph.AlignUsingLinearGapPenaltyWithNavarroAlgorithm(
+      sequence_graph.AlignUsingLinearGapPenaltyWithDijkstraAlgorithm(
           sequence_batch.GetSequence(si));
     }
+    num_total_sequences += num_sequences;
     num_sequences = sequence_batch.LoadBatch();
   }
+
+  std::cerr << "Mapped " << num_total_sequences << " sequences in "
+            << sga::GetRealTime() - mapping_start_real_time << "s" << std::endl;
+
   sequence_batch.FinalizeLoading();
 }
