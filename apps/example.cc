@@ -15,8 +15,8 @@ int main(int argc, char *argv[]) {
     sequence_file_path = argv[2];
   }
   uint32_t max_batch_size = 1000000;
-  sga::SequenceGraph<> sequence_graph;
-  sequence_graph.SetAlignmentParameters(2, 3, 3);
+  sga::SequenceGraph<int32_t, int32_t, int32_t> sequence_graph;
+  sequence_graph.SetAlignmentParameters(1, 1, 1);
   sga::SequenceBatch sequence_batch(max_batch_size);
   sequence_graph.LoadFromGfaFile(sequence_graph_file_path);
   sequence_graph.GenerateCharLabeledGraph();
