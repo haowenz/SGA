@@ -11,10 +11,13 @@
 #include <vector>
 
 #include "gfa.h"
+//#include "khash.h"
 #include "sequence.h"
 #include "utils.h"
 
 namespace sga {
+
+// KHASH_MAP_INIT_INT(k32, uint32_t);
 
 template <class GraphSizeType = int32_t, class QueryLengthType = int16_t,
           class ScoreType = int16_t>
@@ -757,6 +760,15 @@ class SequenceGraph {
     std::vector<std::unordered_map<QueryLengthType, ScoreType>>
         complementary_vertex_distances(num_vertices);
 
+    // std::vector<khash_t(k32) *> forward_vertex_distances(num_vertices,
+    // nullptr); std::vector<khash_t(k32) *>
+    // complementary_vertex_distances(num_vertices,
+    //                                                           nullptr);
+    // for (GraphSizeType vi = 0; vi < num_vertices; ++vi) {
+    //  forward_vertex_distances[vi] = kh_init(k32);
+    //  complementary_vertex_distances[vi] = kh_init(k32);
+    //}
+
     // std::vector<std::unordered_map<
     //    QueryLengthType, VertexWithDistanceForDijkstra<
     //                         GraphSizeType, QueryLengthType, ScoreType>>>
@@ -817,6 +829,15 @@ class SequenceGraph {
               /*is_reverse_complementary=*/false});
 
       ++(stats.forward_num_cells);
+
+      // int khash_return_code = 0;
+      // khiter_t forward_vertex_distances_iterator =
+      //    kh_put(k32, forward_vertex_distances[vertex], 0,
+      //    &khash_return_code);
+      // assert(khash_return_code != -1 && khash_return_code != 0);
+      // kh_value(forward_vertex_distances[vertex],
+      //         forward_vertex_distances_iterator) = cost;
+
       forward_vertex_distances[vertex][0] = cost;
 
       // Now deal with reverse complementary strand.
@@ -831,6 +852,14 @@ class SequenceGraph {
 
       Q.push({/*graph_vertex_id=*/vertex, /*query_index=*/0, /*distance=*/cost,
               /*is_reverse_complementary=*/true});
+
+      // khash_return_code = 0;
+      // khiter_t complementary_vertex_distances_iterator = kh_put(
+      //    k32, complementary_vertex_distances[vertex], 0, &khash_return_code);
+      // assert(khash_return_code != -1 && khash_return_code != 0);
+      // kh_value(complementary_vertex_distances[vertex],
+      //         complementary_vertex_distances_iterator) = cost;
+
       complementary_vertex_distances[vertex][0] = cost;
       ++(stats.rc_num_cells);
 
@@ -896,12 +925,23 @@ class SequenceGraph {
         const ScoreType new_deletion_distance =
             current_vertex.distance + deletion_penalty_;
 
+        // khiter_t vertex_distances_iterator =
+        //    kh_get(k32, vertex_distances[neighbor],
+        //    current_vertex.query_index);
+        // if (vertex_distances_iterator != kh_end(vertex_distances[neighbor]))
+        // {
+        //  if (new_deletion_distance <
+        //      kh_value(vertex_distances[neighbor], vertex_distances_iterator))
+        //      {
+        //    kh_value(vertex_distances[neighbor], vertex_distances_iterator) =
+        //        new_deletion_distance;
         if (vertex_distances[neighbor].find(current_vertex.query_index) !=
             vertex_distances[neighbor].end()) {
           if (new_deletion_distance <
               vertex_distances[neighbor][current_vertex.query_index]) {
             vertex_distances[neighbor][current_vertex.query_index] =
                 new_deletion_distance;
+
             Q.push({/*graph_vertex_id=*/neighbor,
                     /*query_index=*/current_vertex.query_index,
                     /*distance=*/new_deletion_distance,
@@ -923,6 +963,14 @@ class SequenceGraph {
             }
           }
         } else {
+          // int khash_return_code = 0;
+          // khiter_t vertex_distances_iterator =
+          //    kh_put(k32, vertex_distances[neighbor],
+          //           current_vertex.query_index, &khash_return_code);
+          // assert(khash_return_code != -1 && khash_return_code != 0);
+          // kh_value(vertex_distances[neighbor], vertex_distances_iterator) =
+          //    new_deletion_distance;
+
           vertex_distances[neighbor][current_vertex.query_index] =
               new_deletion_distance;
           Q.push({/*graph_vertex_id=*/neighbor,
@@ -973,6 +1021,16 @@ class SequenceGraph {
         // " << labels_[neighbor] << " cost: " << cost << " d: " <<
         // new_match_or_mismatch_distance << std::endl;
 
+        // vertex_distances_iterator =
+        //    kh_get(k32, vertex_distances[neighbor], query_index);
+        // if (vertex_distances_iterator != kh_end(vertex_distances[neighbor]))
+        // {
+        //  if (new_match_or_mismatch_distance <
+        //      kh_value(vertex_distances[neighbor], vertex_distances_iterator))
+        //      {
+        //    kh_value(vertex_distances[neighbor], vertex_distances_iterator) =
+        //        new_match_or_mismatch_distance;
+
         if (vertex_distances[neighbor].find(query_index) !=
             vertex_distances[neighbor].end()) {
           if (new_match_or_mismatch_distance <
@@ -1002,6 +1060,14 @@ class SequenceGraph {
             }
           }
         } else {
+          // int khash_return_code = 0;
+          // khiter_t vertex_distances_iterator = kh_put(
+          //    k32, vertex_distances[neighbor], query_index,
+          //    &khash_return_code);
+          // assert(khash_return_code != -1 && khash_return_code != 0);
+          // kh_value(vertex_distances[neighbor], vertex_distances_iterator) =
+          //    new_match_or_mismatch_distance;
+
           vertex_distances[neighbor][query_index] =
               new_match_or_mismatch_distance;
 
@@ -1033,6 +1099,16 @@ class SequenceGraph {
       const ScoreType new_insertion_distance =
           current_vertex.distance + insertion_penalty_;
 
+      // khiter_t vertex_distances_iterator = kh_get(
+      //    k32, vertex_distances[current_vertex.graph_vertex_id], query_index);
+      // if (vertex_distances_iterator !=
+      //    kh_end(vertex_distances[current_vertex.graph_vertex_id])) {
+      //  if (new_insertion_distance <
+      //      kh_value(vertex_distances[current_vertex.graph_vertex_id],
+      //               vertex_distances_iterator)) {
+      //    kh_value(vertex_distances[current_vertex.graph_vertex_id],
+      //             vertex_distances_iterator) = new_insertion_distance;
+
       if (vertex_distances[current_vertex.graph_vertex_id].find(query_index) !=
           vertex_distances[current_vertex.graph_vertex_id].end()) {
         if (new_insertion_distance <
@@ -1062,6 +1138,14 @@ class SequenceGraph {
           }
         }
       } else {
+        // int khash_return_code = 0;
+        // khiter_t vertex_distances_iterator =
+        //    kh_put(k32, vertex_distances[current_vertex.graph_vertex_id],
+        //           query_index, &khash_return_code);
+        // assert(khash_return_code != -1 && khash_return_code != 0);
+        // kh_value(vertex_distances[current_vertex.graph_vertex_id],
+        //         vertex_distances_iterator) = new_insertion_distance;
+
         vertex_distances[current_vertex.graph_vertex_id][query_index] =
             new_insertion_distance;
 
@@ -1087,6 +1171,11 @@ class SequenceGraph {
         }
       }
     }
+
+    // for (GraphSizeType vi = 0; vi < num_vertices; ++vi) {
+    //  kh_destroy(k32, forward_vertex_distances[vi]);
+    //  kh_destroy(k32, complementary_vertex_distances[vi]);
+    //}
 
     // std::cerr << "Sequence length: " << sequence_length
     //          << ", forward alignment cost:" << forward_alignment_cost
