@@ -764,7 +764,7 @@ class SequenceGraph {
   }
 
   ScoreType AlignUsingLinearGapPenaltyWithDijkstraAlgorithm(
-      const sga::Sequence &sequence,
+      const sga::Sequence &sequence, GraphSizeType start_vertex,
       DijkstraAlgorithmStatistics<GraphSizeType> &stats) {
     const GraphSizeType num_vertices = GetNumVertices();
     const QueryLengthType sequence_length = sequence.GetLength();
@@ -830,7 +830,12 @@ class SequenceGraph {
     stats.forward_num_cells = 0;
     stats.rc_num_cells = 0;
 
-    for (GraphSizeType vertex = 0; vertex < num_vertices; ++vertex) {
+    GraphSizeType init_start_vertex =
+        start_vertex == num_vertices ? 1 : start_vertex;
+    GraphSizeType init_end_vertex =
+        start_vertex == num_vertices ? num_vertices : start_vertex + 1;
+    for (GraphSizeType vertex = init_start_vertex; vertex < init_end_vertex;
+         ++vertex) {
       // Deal with forward strand fisrt.
       ScoreType cost = 0;
       const char vertex_label = labels_[vertex];
@@ -1206,7 +1211,24 @@ class SequenceGraph {
     const std::string &sequence_bases = sequence.GetSequence();
     DijkstraAlgorithmStatistics<GraphSizeType> stats;
     const ScoreType min_alignment_cost =
-        AlignUsingLinearGapPenaltyWithDijkstraAlgorithm(sequence, stats);
+        AlignUsingLinearGapPenaltyWithDijkstraAlgorithm(
+            sequence, GetNumVertices(), stats);
+
+    std::cerr << "Sequence length: " << sequence_length
+              << ", alignment cost:" << min_alignment_cost
+              << ", forward num cells:" << stats.forward_num_cells
+              << ", reverse num cells: " << stats.rc_num_cells << std::endl;
+    return min_alignment_cost;
+  }
+
+  ScoreType ExtendUsingLinearGapPenaltyWithDijkstraAlgorithm(
+      const sga::Sequence &sequence, GraphSizeType start_vertex) {
+    const QueryLengthType sequence_length = sequence.GetLength();
+    const std::string &sequence_bases = sequence.GetSequence();
+    DijkstraAlgorithmStatistics<GraphSizeType> stats;
+    const ScoreType min_alignment_cost =
+        AlignUsingLinearGapPenaltyWithDijkstraAlgorithm(sequence, start_vertex,
+                                                        stats);
 
     std::cerr << "Sequence length: " << sequence_length
               << ", alignment cost:" << min_alignment_cost
