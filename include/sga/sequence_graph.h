@@ -763,6 +763,37 @@ class SequenceGraph {
     return min_alignment_cost;
   }
 
+  QueryLengthType ForwardExtendUsingLinearGapPenaltyWithNavarroAlgorithm(
+      const sga::Sequence &sequence, GraphSizeType start_vertex) {
+    QueryLengthType max_cost = std::max(
+        std::max(substitution_penalty_, deletion_penalty_), insertion_penalty_);
+    const GraphSizeType num_vertices = GetNumVertices();
+    const QueryLengthType sequence_length = sequence.GetLength();
+    const std::string &sequence_bases = sequence.GetSequence();
+    std::vector<QueryLengthType> previous_layer(num_vertices,
+                                                sequence_length * max_cost + 1);
+    std::vector<QueryLengthType> current_layer(num_vertices,
+                                               sequence_length * max_cost + 1);
+    current_layer[start_vertex] =
+        sequence_bases[0] == labels_[start_vertex] ? 0 : substitution_penalty_;
+
+    GraphSizeType num_propagations = 0;
+
+    for (QueryLengthType i = 1; i < sequence_length; ++i) {
+      std::swap(previous_layer, current_layer);
+      ComputeLayerWithNavarroAlgorithm(sequence_bases[i], previous_layer,
+                                       num_propagations, current_layer);
+    }
+
+    const QueryLengthType forward_alignment_cost =
+        *std::min_element(current_layer.begin(), current_layer.end());
+
+    std::cerr << "Sequence length: " << sequence_length
+              << ", forward alignment cost:" << forward_alignment_cost
+              << ", num propogations: " << num_propagations << std::endl;
+    return forward_alignment_cost;
+  }
+
   ScoreType AlignUsingLinearGapPenaltyWithDijkstraAlgorithm(
       const sga::Sequence &sequence, GraphSizeType start_vertex,
       DijkstraAlgorithmStatistics<GraphSizeType> &stats) {
