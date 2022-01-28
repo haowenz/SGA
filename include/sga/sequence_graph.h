@@ -774,6 +774,7 @@ class SequenceGraph {
                                                 sequence_length * max_cost + 1);
     std::vector<QueryLengthType> current_layer(num_vertices,
                                                sequence_length * max_cost + 1);
+    current_layer[0] = deletion_penalty_;
     current_layer[start_vertex] =
         sequence_bases[0] == labels_[start_vertex] ? 0 : substitution_penalty_;
 
@@ -969,6 +970,19 @@ class SequenceGraph {
                                    ? complementary_vertex_distances
                                    : forward_vertex_distances;
 
+      const ScoreType min_insertion_distance =
+          (ScoreType)(insertion_penalty_ * (current_vertex.query_index + 1));
+      if (current_vertex.distance > min_insertion_distance) {
+        Q.push(
+            {/*graph_vertex_id=*/start_vertex,
+             /*query_index=*/(QueryLengthType)(current_vertex.query_index + 1),
+             /*distance=*/min_insertion_distance,
+             /*is_reverse_complementary=*/
+             current_vertex.is_reverse_complementary});
+        vertex_distances[start_vertex][current_vertex.query_index + 1] =
+            min_insertion_distance;
+      }
+
       // Explore its neighbors.
       for (const auto &neighbor :
            adjacency_list_[current_vertex.graph_vertex_id]) {
@@ -1065,7 +1079,7 @@ class SequenceGraph {
 
         const ScoreType new_match_or_mismatch_distance =
             std::min(current_vertex.distance,
-                     (ScoreType)(deletion_penalty_ * query_index)) +
+                     (ScoreType)(insertion_penalty_ * query_index)) +
             cost;
 
         // std::cerr << "seq base: " << sequence_bases[query_index] << " label:
